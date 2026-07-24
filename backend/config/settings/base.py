@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
-    # "accounts",  # re-enabled in Task 3 (app does not exist yet)
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -65,7 +65,7 @@ DATABASES = {
     }
 }
 
-# AUTH_USER_MODEL is set in Task 3 once the accounts app exists.
+AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
