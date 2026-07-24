@@ -1,0 +1,12 @@
+.git
+.gitignore
+docs/
+PROJECT.md
+.claude/
+skills-lock.json
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.env
