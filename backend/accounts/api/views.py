@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.api.serializers import LoginSerializer, UserSerializer
@@ -40,4 +41,35 @@ class LoginView(APIView):
             {"user": UserSerializer(user).data}, status=status.HTTP_200_OK
         )
         set_auth_cookies(response, refresh.access_token, refresh)
+        return response
+
+
+class RefreshView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        raw_refresh = request.COOKIES.get(settings.AUTH_COOKIE_REFRESH)
+        if not raw_refresh:
+            return Response(
+                {"detail": "No refresh token."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+        try:
+            refresh = RefreshToken(raw_refresh)
+        except TokenError as exc:
+            raise InvalidToken(str(exc))
+
+        access = refresh.access_token
+        if settings.SIMPLE_JWT.get("ROTATE_REFRESH_TOKENS"):
+            if settings.SIMPLE_JWT.get("BLACKLIST_AFTER_ROTATION"):
+                try:
+                    refresh.blacklist()
+                except AttributeError:
+                    pass
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+
+        response = Response(status=status.HTTP_200_OK)
+        set_auth_cookies(response, access, refresh)
         return response
