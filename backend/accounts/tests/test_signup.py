@@ -38,6 +38,15 @@ def test_signup_creates_user_and_auto_logs_in():
 
 
 @pytest.mark.django_db
+def test_signup_sets_csrf_cookie():
+    # Auto-login is followed by the avatar-selection PATCH, which needs CSRF.
+    client = APIClient()
+    response = client.post("/api/auth/signup/", _payload(), format="json")
+    assert response.status_code == 201
+    assert "csrftoken" in response.cookies
+
+
+@pytest.mark.django_db
 def test_signup_requires_consent():
     client = APIClient()
     response = client.post("/api/auth/signup/", _payload(consent=False), format="json")

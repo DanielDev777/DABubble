@@ -118,6 +118,7 @@ class MeView(APIView):
         return Response(UserSerializer(user, context={"request": request}).data)
 
 
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class SignupView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
