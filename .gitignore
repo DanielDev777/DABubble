@@ -11,6 +11,11 @@ PROJECT.md
 .claude/
 skills-lock.json
 
+# Local reference screenshots / images (never commit)
+Screenshot*.png
+Screenshot*.jpg
+*.local.png
+
 # Python
 __pycache__/
 *.py[cod]
