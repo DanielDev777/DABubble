@@ -8,7 +8,7 @@ User = get_user_model()
 @pytest.fixture
 def logged_in_client(db):
     User.objects.create_user(
-        email="alice@example.com", display_name="Alice", password="s3cret-pass"
+        email="alice@example.com", full_name="Alice", password="s3cret-pass"
     )
     client = APIClient()
     client.post(
@@ -24,7 +24,7 @@ def test_me_returns_current_user(logged_in_client):
     response = logged_in_client.get("/api/auth/me/")
     assert response.status_code == 200
     assert response.data["email"] == "alice@example.com"
-    assert response.data["display_name"] == "Alice"
+    assert response.data["full_name"] == "Alice"
 
 
 @pytest.mark.django_db

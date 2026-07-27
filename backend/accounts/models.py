@@ -7,7 +7,7 @@ from accounts.managers import UserManager
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField("email address", unique=True)
-    display_name = models.CharField(max_length=150)
+    full_name = models.CharField(max_length=150)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -15,7 +15,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["display_name"]
+    REQUIRED_FIELDS = ["full_name"]
 
     def __str__(self):
         return self.email
