@@ -6,7 +6,7 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.api.urls")),
-    # path("api/users/", include("accounts.api.user_urls")),  # enabled in Task 6
+    path("api/users/", include("accounts.api.user_urls")),
 ]
 
 if settings.DEBUG:

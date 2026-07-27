@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -15,6 +16,7 @@ from accounts.api.serializers import (
     SignupSerializer,
     UserSerializer,
 )
+from accounts.models import User
 
 
 def set_auth_cookies(response, access, refresh):
@@ -131,3 +133,11 @@ class SignupView(APIView):
         )
         set_auth_cookies(response, refresh.access_token, refresh)
         return response
+
+
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        return Response(UserSerializer(user, context={"request": request}).data)
