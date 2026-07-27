@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.api.serializers import LoginSerializer, UserSerializer
+from accounts.api.serializers import LoginSerializer, SignupSerializer, UserSerializer
 
 
 def set_auth_cookies(response, access, refresh):
@@ -98,4 +98,21 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
+
+
+class SignupView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = SignupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        response = Response(
+            {"user": UserSerializer(user, context={"request": request}).data},
+            status=status.HTTP_201_CREATED,
+        )
+        set_auth_cookies(response, refresh.access_token, refresh)
+        return response
