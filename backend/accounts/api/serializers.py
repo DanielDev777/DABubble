@@ -54,6 +54,38 @@ class SignupSerializer(serializers.Serializer):
         )
 
 
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("full_name", "avatar", "default_avatar")
+
+    def validate_avatar(self, image):
+        if image.size > MAX_AVATAR_BYTES:
+            raise serializers.ValidationError("Image must be 2 MB or smaller.")
+        content_type = getattr(image, "content_type", None)
+        if content_type not in ALLOWED_AVATAR_TYPES:
+            raise serializers.ValidationError(
+                "Only JPEG, PNG, or WEBP images are allowed."
+            )
+        return image
+
+    def update(self, instance, validated_data):
+        if "full_name" in validated_data:
+            instance.full_name = validated_data["full_name"]
+        if validated_data.get("avatar"):
+            instance.avatar = validated_data["avatar"]
+            instance.default_avatar = None
+        elif validated_data.get("default_avatar"):
+            instance.default_avatar = validated_data["default_avatar"]
+            instance.avatar = None
+        instance.save()
+        return instance
+
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
