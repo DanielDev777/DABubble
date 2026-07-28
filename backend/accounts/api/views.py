@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -16,6 +17,7 @@ from accounts.api.serializers import (
     SignupSerializer,
     UserSerializer,
 )
+from accounts.google import GoogleTokenError, verify_google_id_token
 from accounts.models import User
 
 
@@ -142,3 +144,60 @@ class UserDetailView(APIView):
     def get(self, request, pk):
         user = get_object_or_404(User, pk=pk)
         return Response(UserSerializer(user, context={"request": request}).data)
+
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        token = request.data.get("id_token")
+        if not token:
+            return Response(
+                {"detail": "id_token is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            claims = verify_google_id_token(token)
+        except GoogleTokenError:
+            return Response(
+                {"detail": "Invalid Google token."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+        if not claims.get("email_verified"):
+            return Response(
+                {"detail": "Google email is not verified."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        user = self._get_or_create(claims)
+        refresh = RefreshToken.for_user(user)
+        response = Response(
+            {"user": UserSerializer(user, context={"request": request}).data},
+            status=status.HTTP_200_OK,
+        )
+        set_auth_cookies(response, refresh.access_token, refresh)
+        return response
+
+    def _get_or_create(self, claims):
+        sub = claims["sub"]
+        email = claims["email"]
+
+        user = User.objects.filter(google_sub=sub).first()
+        if user:
+            return user
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            if not user.google_sub:
+                user.google_sub = sub
+                user.save(update_fields=["google_sub"])
+            return user
+
+        return User.objects.create_user(
+            email=email,
+            full_name=claims.get("name", ""),
+            password=None,
+            google_sub=sub,
+            avatar_url=claims.get("picture"),
+            privacy_accepted_at=timezone.now(),
+        )

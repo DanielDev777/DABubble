@@ -12,7 +12,7 @@ from accounts.models import DEFAULT_AVATAR_SLUGS, User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "avatar", "default_avatar")
+        fields = ("id", "email", "full_name", "avatar", "avatar_url", "default_avatar")
         read_only_fields = fields
 
 
