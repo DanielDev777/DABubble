@@ -112,3 +112,6 @@ CORS_ALLOWED_ORIGINS = get_list_env("CORS_ALLOWED_ORIGINS", default=["http://loc
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = get_list_env("CORS_ALLOWED_ORIGINS", default=["http://localhost:4200"])
+
+GOOGLE_AUTH_CLIENT_ID = get_env("GOOGLE_AUTH_CLIENT_ID", default="")
+GOOGLE_AUTH_CLIENT_SECRET = get_env("GOOGLE_AUTH_CLIENT_SECRET", default="")
