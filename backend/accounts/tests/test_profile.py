@@ -102,6 +102,48 @@ def test_reject_oversize_image(auth_client, settings, tmp_path):
 
 
 @pytest.mark.django_db
+def test_upload_avatar_clears_google_url(settings, tmp_path):
+    settings.MEDIA_ROOT = str(tmp_path)
+    User.objects.create_user(
+        email="g@example.com", full_name="G", password="s3cret-pass-123",
+        avatar_url="https://lh3.googleusercontent.com/pic.jpg",
+    )
+    client = APIClient()
+    client.post(
+        "/api/auth/login/",
+        {"email": "g@example.com", "password": "s3cret-pass-123"},
+        format="json",
+    )
+    response = client.patch(
+        "/api/auth/me/", {"avatar": _png_upload()}, format="multipart"
+    )
+    assert response.status_code == 200
+    assert response.data["avatar"] is not None
+    assert response.data["avatar_url"] is None
+
+
+@pytest.mark.django_db
+def test_set_default_clears_google_url(settings, tmp_path):
+    settings.MEDIA_ROOT = str(tmp_path)
+    User.objects.create_user(
+        email="g2@example.com", full_name="G2", password="s3cret-pass-123",
+        avatar_url="https://lh3.googleusercontent.com/pic.jpg",
+    )
+    client = APIClient()
+    client.post(
+        "/api/auth/login/",
+        {"email": "g2@example.com", "password": "s3cret-pass-123"},
+        format="json",
+    )
+    response = client.patch(
+        "/api/auth/me/", {"default_avatar": "quiff"}, format="json"
+    )
+    assert response.status_code == 200
+    assert response.data["default_avatar"] == "quiff"
+    assert response.data["avatar_url"] is None
+
+
+@pytest.mark.django_db
 def test_patch_requires_authentication():
     client = APIClient()
     response = client.patch("/api/auth/me/", {"full_name": "X"}, format="json")

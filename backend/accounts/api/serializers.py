@@ -79,9 +79,11 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         if validated_data.get("avatar"):
             instance.avatar = validated_data["avatar"]
             instance.default_avatar = None
+            instance.avatar_url = None
         elif validated_data.get("default_avatar"):
             instance.default_avatar = validated_data["default_avatar"]
             instance.avatar = None
+            instance.avatar_url = None
         instance.save()
         return instance
 
