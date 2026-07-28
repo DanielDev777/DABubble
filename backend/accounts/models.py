@@ -16,6 +16,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         max_length=20, choices=DEFAULT_AVATAR_CHOICES, null=True, blank=True
     )
     privacy_accepted_at = models.DateTimeField(null=True, blank=True)
+    google_sub = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    avatar_url = models.URLField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
