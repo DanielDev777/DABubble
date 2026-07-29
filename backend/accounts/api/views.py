@@ -1,3 +1,6 @@
+import random
+import uuid
+
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -18,7 +21,7 @@ from accounts.api.serializers import (
     UserSerializer,
 )
 from accounts.google import GoogleTokenError, verify_google_id_token
-from accounts.models import User
+from accounts.models import DEFAULT_AVATAR_SLUGS, User
 
 
 def set_auth_cookies(response, access, refresh):
@@ -201,3 +204,25 @@ class GoogleLoginView(APIView):
             avatar_url=claims.get("picture"),
             privacy_accepted_at=timezone.now(),
         )
+
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class GuestLoginView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        user = User.objects.create_user(
+            email=f"guest_{uuid.uuid4().hex}@guest.local",
+            full_name="Guest",
+            password=None,
+            is_guest=True,
+            default_avatar=random.choice(DEFAULT_AVATAR_SLUGS),
+        )
+        refresh = RefreshToken.for_user(user)
+        response = Response(
+            {"user": UserSerializer(user, context={"request": request}).data},
+            status=status.HTTP_201_CREATED,
+        )
+        set_auth_cookies(response, refresh.access_token, refresh)
+        return response
