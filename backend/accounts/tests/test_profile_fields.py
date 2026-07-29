@@ -22,3 +22,4 @@ def test_new_user_profile_fields_default_to_empty():
     assert user.privacy_accepted_at is None
     assert user.google_sub is None
     assert user.avatar_url is None
+    assert user.is_guest is False
