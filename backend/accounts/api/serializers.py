@@ -10,10 +10,18 @@ from accounts.models import DEFAULT_AVATAR_SLUGS, User
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_online = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "avatar", "avatar_url", "default_avatar", "is_guest")
-        read_only_fields = fields
+        fields = (
+            "id", "email", "full_name", "avatar", "avatar_url",
+            "default_avatar", "is_guest", "is_online",
+        )
+        read_only_fields = (
+            "id", "email", "full_name", "avatar", "avatar_url",
+            "default_avatar", "is_guest",
+        )
 
 
 class SignupSerializer(serializers.Serializer):

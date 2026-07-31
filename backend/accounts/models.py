@@ -19,6 +19,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     google_sub = models.CharField(max_length=255, unique=True, null=True, blank=True)
     avatar_url = models.URLField(null=True, blank=True)
     is_guest = models.BooleanField(default=False)
+    presence_connections = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -30,3 +31,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    @property
+    def is_online(self):
+        return self.presence_connections > 0
