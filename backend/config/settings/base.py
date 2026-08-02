@@ -10,6 +10,7 @@ DEBUG = get_bool_env("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = get_list_env("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -18,6 +19,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
+    "channels",
     "corsheaders",
     "accounts",
 ]
@@ -115,3 +117,13 @@ CSRF_TRUSTED_ORIGINS = get_list_env("CORS_ALLOWED_ORIGINS", default=["http://loc
 
 GOOGLE_AUTH_CLIENT_ID = get_env("GOOGLE_AUTH_CLIENT_ID", default="")
 GOOGLE_AUTH_CLIENT_SECRET = get_env("GOOGLE_AUTH_CLIENT_SECRET", default="")
+
+REDIS_HOST = get_env("REDIS_HOST", default="redis")
+REDIS_PORT = get_env("REDIS_PORT", default="6379")
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [(REDIS_HOST, int(REDIS_PORT))]},
+    }
+}
