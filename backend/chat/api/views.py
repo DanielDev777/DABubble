@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.models import User
 from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer
 from chat.models import Channel, ChannelMembership
@@ -63,6 +64,39 @@ class ChannelViewSet(viewsets.ModelViewSet):
         if membership is None:
             return Response(
                 {"detail": "Not a member."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def add_member(self, request, pk=None):
+        channel = self.get_object()
+        target = get_object_or_404(User, pk=request.data.get("user_id"))
+        _, created = ChannelMembership.objects.get_or_create(
+            channel=channel, user=target
+        )
+        if not created:
+            return Response(
+                {"detail": "Already a member."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(self.get_serializer(channel).data)
+
+    @action(detail=True, methods=["post"])
+    def kick(self, request, pk=None):
+        channel = self.get_object()
+        user_id = request.data.get("user_id")
+        if str(user_id) == str(request.user.id):
+            return Response(
+                {"detail": "You cannot kick yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        membership = ChannelMembership.objects.filter(
+            channel=channel, user_id=user_id
+        ).first()
+        if membership is None:
+            return Response(
+                {"detail": "That user is not a member."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         membership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
