@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.api.serializers import UserSerializer
 from accounts.models import User
 from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer
@@ -100,3 +101,26 @@ class ChannelViewSet(viewsets.ModelViewSet):
             )
         membership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def transfer(self, request, pk=None):
+        channel = self.get_object()
+        user_id = request.data.get("user_id")
+        if not ChannelMembership.objects.filter(
+            channel=channel, user_id=user_id
+        ).exists():
+            return Response(
+                {"detail": "New owner must be a current member."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        channel.owner_id = user_id
+        channel.save(update_fields=["owner", "updated_at"])
+        return Response(self.get_serializer(channel).data)
+
+    @action(detail=True, methods=["get"])
+    def members(self, request, pk=None):
+        channel = self.get_object()
+        cards = UserSerializer(
+            channel.members.all(), many=True, context={"request": request}
+        )
+        return Response(cards.data)
