@@ -12,11 +12,11 @@ class ChannelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Channel
         fields = (
-            "id", "name", "description", "is_private", "owner",
+            "id", "name", "description", "owner",
             "member_count", "is_member", "created_at",
         )
         read_only_fields = (
-            "id", "is_private", "owner", "member_count", "is_member", "created_at",
+            "id", "owner", "member_count", "is_member", "created_at",
         )
 
     def get_member_count(self, obj):

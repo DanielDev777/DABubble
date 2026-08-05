@@ -11,7 +11,6 @@ class Channel(models.Model):
         on_delete=models.CASCADE,
         related_name="owned_channels",
     )
-    is_private = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     members = models.ManyToManyField(

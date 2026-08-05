@@ -19,7 +19,6 @@ def test_create_channel_with_owner(owner):
     channel = Channel.objects.create(name="General", owner=owner)
     assert channel.name == "General"
     assert channel.owner == owner
-    assert channel.is_private is False
     assert channel.description == ""
 
 

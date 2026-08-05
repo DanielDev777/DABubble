@@ -1,4 +1,3 @@
-from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -23,33 +22,15 @@ class ChannelViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        user = self.request.user
         return (
-            Channel.objects.filter(Q(is_private=False) | Q(members=user))
+            Channel.objects.filter(members=self.request.user)
             .distinct()
             .order_by("name")
         )
 
     def perform_create(self, serializer):
-        is_private = bool(self.request.data.get("is_private", False))
-        channel = serializer.save(owner=self.request.user, is_private=is_private)
+        channel = serializer.save(owner=self.request.user)
         ChannelMembership.objects.create(channel=channel, user=self.request.user)
-
-    @action(detail=True, methods=["post"])
-    def join(self, request, pk=None):
-        channel = get_object_or_404(Channel, pk=pk)
-        if channel.is_private:
-            return Response(
-                {"detail": "This channel is private."}, status=status.HTTP_403_FORBIDDEN
-            )
-        _, created = ChannelMembership.objects.get_or_create(
-            channel=channel, user=request.user
-        )
-        if not created:
-            return Response(
-                {"detail": "Already a member."}, status=status.HTTP_400_BAD_REQUEST
-            )
-        return Response(self.get_serializer(channel).data)
 
     @action(detail=True, methods=["post"])
     def leave(self, request, pk=None):
