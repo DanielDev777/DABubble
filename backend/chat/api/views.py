@@ -146,3 +146,23 @@ class MessageViewSet(viewsets.ModelViewSet):
             channel.id, {"type": "message_created", "message": serializer.data}
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        message = self.get_object()
+        if message.author_id != request.user.id:
+            return Response(
+                {"detail": "Only the author can edit this message."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if message.is_deleted:
+            return Response(
+                {"detail": "Cannot edit a deleted message."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = self.get_serializer(message, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(edited_at=timezone.now())
+        broadcast_to_channel(
+            message.channel_id, {"type": "message_updated", "message": serializer.data}
+        )
+        return Response(serializer.data)
