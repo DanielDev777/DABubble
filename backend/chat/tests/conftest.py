@@ -27,3 +27,15 @@ def client_for():
         )
         return client
     return _client
+
+
+@pytest.fixture(autouse=True)
+def in_memory_channel_layer(settings):
+    settings.CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+    }
+    from channels.layers import channel_layers
+
+    channel_layers.backends.clear()
+    yield
+    channel_layers.backends.clear()

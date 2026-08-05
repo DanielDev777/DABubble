@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from accounts.api.serializers import UserSerializer
-from chat.models import Channel
+from chat.models import Channel, Message
 
 
 class ChannelSerializer(serializers.ModelSerializer):
@@ -35,3 +35,28 @@ class ChannelSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError("A channel with this name already exists.")
         return value
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = (
+            "id", "channel", "author", "content",
+            "created_at", "edited_at", "is_deleted",
+        )
+        read_only_fields = ("id", "author", "created_at", "edited_at", "is_deleted")
+
+    def validate_content(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Message cannot be empty.")
+        if len(value) > 4000:
+            raise serializers.ValidationError("Message too long (max 4000 characters).")
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.is_deleted:
+            data["content"] = ""
+        return data

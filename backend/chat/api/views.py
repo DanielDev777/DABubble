@@ -1,14 +1,19 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404 as drf_get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.api.serializers import UserSerializer
 from accounts.models import User
+from chat.api.pagination import MessageCursorPagination
 from chat.api.permissions import IsChannelOwner
-from chat.api.serializers import ChannelSerializer
-from chat.models import Channel, ChannelMembership
+from chat.api.serializers import ChannelSerializer, MessageSerializer
+from chat.broadcast import broadcast_to_channel
+from chat.models import Channel, ChannelMembership, Message
 
 OWNER_ACTIONS = {"update", "partial_update", "destroy", "add_member", "kick", "transfer"}
 
@@ -105,3 +110,39 @@ class ChannelViewSet(viewsets.ModelViewSet):
             channel.members.all(), many=True, context={"request": request}
         )
         return Response(cards.data)
+
+
+class MessageViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSerializer
+    pagination_class = MessageCursorPagination
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Message.objects.filter(
+            channel__members=self.request.user
+        ).select_related("author", "channel")
+
+    def _member_channel_or_404(self, channel_id):
+        if channel_id in (None, ""):
+            raise Http404("channel is required.")
+        return drf_get_object_or_404(
+            Channel, pk=channel_id, members=self.request.user
+        )
+
+    def list(self, request, *args, **kwargs):
+        channel_id = request.query_params.get("channel")
+        self._member_channel_or_404(channel_id)
+        qs = self.filter_queryset(self.get_queryset().filter(channel_id=channel_id))
+        page = self.paginate_queryset(qs)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        channel = self._member_channel_or_404(request.data.get("channel"))
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(author=request.user)
+        broadcast_to_channel(
+            channel.id, {"type": "message_created", "message": serializer.data}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
