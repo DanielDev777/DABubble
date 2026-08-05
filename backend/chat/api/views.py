@@ -166,3 +166,31 @@ class MessageViewSet(viewsets.ModelViewSet):
             message.channel_id, {"type": "message_updated", "message": serializer.data}
         )
         return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        message = self.get_object()
+        channel = message.channel
+        if message.author_id == request.user.id:
+            mid = message.id
+            message.delete()
+            broadcast_to_channel(
+                channel.id,
+                {"type": "message_deleted", "id": mid, "channel": channel.id},
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        if channel.owner_id == request.user.id:
+            message.is_deleted = True
+            message.content = ""
+            message.save(update_fields=["is_deleted", "content"])
+            broadcast_to_channel(
+                channel.id,
+                {
+                    "type": "message_updated",
+                    "message": self.get_serializer(message).data,
+                },
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"detail": "You cannot delete this message."},
+            status=status.HTTP_403_FORBIDDEN,
+        )

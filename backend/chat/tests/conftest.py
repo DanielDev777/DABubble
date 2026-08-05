@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -39,3 +41,16 @@ def in_memory_channel_layer(settings):
     channel_layers.backends.clear()
     yield
     channel_layers.backends.clear()
+
+
+@pytest.fixture(autouse=True)
+def neutralize_broadcast():
+    """Stop sync REST tests from running the real async broadcast.
+
+    The real broadcast (async_to_sync(group_send)) is a no-op without WS
+    subscribers and, under asyncio_mode=auto, poisons the event loop for
+    later tests. Broadcast wiring is asserted via local patches in the
+    broadcast tests; real delivery is covered by the async consumer tests.
+    """
+    with patch("chat.api.views.broadcast_to_channel"):
+        yield
