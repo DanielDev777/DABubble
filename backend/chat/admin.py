@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from chat.models import Channel, ChannelMembership
+from chat.models import Channel, ChannelMembership, Message
 
 
 @admin.register(Channel)
@@ -12,3 +12,9 @@ class ChannelAdmin(admin.ModelAdmin):
 @admin.register(ChannelMembership)
 class ChannelMembershipAdmin(admin.ModelAdmin):
     list_display = ("channel", "user", "joined_at")
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ("channel", "author", "created_at", "is_deleted")
+    search_fields = ("content",)
