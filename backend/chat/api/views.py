@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404 as drf_get_object_or_404
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -13,7 +14,8 @@ from chat.api.pagination import MessageCursorPagination
 from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer, MessageSerializer
 from chat.broadcast import broadcast_to_channel
-from chat.models import Channel, ChannelMembership, Message
+from chat.models import Attachment, Channel, ChannelMembership, Message
+from chat.uploads import MAX_ATTACHMENTS_PER_MESSAGE, validate_attachment
 
 OWNER_ACTIONS = {"update", "partial_update", "destroy", "add_member", "kick", "transfer"}
 
@@ -116,6 +118,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     pagination_class = MessageCursorPagination
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         return Message.objects.filter(
@@ -139,19 +142,37 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         channel = self._member_channel_or_404(request.data.get("channel"))
+        files = request.FILES.getlist("files")
         content = request.data.get("content", "") or ""
-        if not content.strip():
+
+        if len(files) > MAX_ATTACHMENTS_PER_MESSAGE:
+            return Response(
+                {"detail": f"At most {MAX_ATTACHMENTS_PER_MESSAGE} files per message."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        for f in files:
+            validate_attachment(f)
+        if not content.strip() and not files:
             return Response(
                 {"detail": "A message needs text or at least one file."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(author=request.user)
-        broadcast_to_channel(
-            channel.id, {"type": "message_created", "message": serializer.data}
-        )
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        message = serializer.save(author=request.user)
+        for f in files:
+            Attachment.objects.create(
+                message=message,
+                file=f,
+                original_name=f.name,
+                content_type=f.content_type,
+                size=f.size,
+            )
+
+        data = self.get_serializer(message).data
+        broadcast_to_channel(channel.id, {"type": "message_created", "message": data})
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
         message = self.get_object()
