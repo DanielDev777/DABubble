@@ -53,6 +53,13 @@ class Message(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="messages"
     )
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="replies",
+    )
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(null=True, blank=True)
