@@ -139,6 +139,12 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         channel = self._member_channel_or_404(request.data.get("channel"))
+        content = request.data.get("content", "") or ""
+        if not content.strip():
+            return Response(
+                {"detail": "A message needs text or at least one file."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(author=request.user)

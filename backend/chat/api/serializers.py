@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from accounts.api.serializers import UserSerializer
-from chat.models import Channel, Message
+from chat.models import Attachment, Channel, Message
 
 
 class ChannelSerializer(serializers.ModelSerializer):
@@ -37,26 +37,33 @@ class ChannelSerializer(serializers.ModelSerializer):
         return value
 
 
+class AttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = ("id", "file", "original_name", "content_type", "size")
+        read_only_fields = fields
+
+
 class MessageSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
+    attachments = AttachmentSerializer(many=True, read_only=True)
+    content = serializers.CharField(
+        required=False, allow_blank=True, max_length=4000, default=""
+    )
 
     class Meta:
         model = Message
         fields = (
             "id", "channel", "author", "content",
-            "created_at", "edited_at", "is_deleted",
+            "created_at", "edited_at", "is_deleted", "attachments",
         )
-        read_only_fields = ("id", "author", "created_at", "edited_at", "is_deleted")
-
-    def validate_content(self, value):
-        if not value.strip():
-            raise serializers.ValidationError("Message cannot be empty.")
-        if len(value) > 4000:
-            raise serializers.ValidationError("Message too long (max 4000 characters).")
-        return value
+        read_only_fields = (
+            "id", "author", "created_at", "edited_at", "is_deleted", "attachments",
+        )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.is_deleted:
             data["content"] = ""
+            data["attachments"] = []
         return data
