@@ -1,3 +1,4 @@
+from django.db.models import Count, Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -10,7 +11,7 @@ from rest_framework.response import Response
 
 from accounts.api.serializers import UserSerializer
 from accounts.models import User
-from chat.api.pagination import MessageCursorPagination
+from chat.api.pagination import MessageCursorPagination, ThreadCursorPagination
 from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer, MessageSerializer
 from chat.broadcast import broadcast_to_channel
@@ -132,10 +133,31 @@ class MessageViewSet(viewsets.ModelViewSet):
             Channel, pk=channel_id, members=self.request.user
         )
 
+    def _member_message_or_404(self, message_id):
+        if message_id in (None, ""):
+            raise Http404("message not found.")
+        return drf_get_object_or_404(self.get_queryset(), pk=message_id)
+
     def list(self, request, *args, **kwargs):
+        parent_id = request.query_params.get("parent")
+        if parent_id:
+            parent = self._member_message_or_404(parent_id)
+            qs = self.get_queryset().filter(parent_id=parent.id).order_by("created_at")
+            paginator = ThreadCursorPagination()
+            page = paginator.paginate_queryset(qs, request, view=self)
+            serializer = self.get_serializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
         channel_id = request.query_params.get("channel")
         self._member_channel_or_404(channel_id)
-        qs = self.filter_queryset(self.get_queryset().filter(channel_id=channel_id))
+        qs = (
+            self.get_queryset()
+            .filter(channel_id=channel_id, parent__isnull=True)
+            .annotate(
+                _reply_count=Count("replies"),
+                _last_reply_at=Max("replies__created_at"),
+            )
+        )
         page = self.paginate_queryset(qs)
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
@@ -160,7 +182,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        message = serializer.save(author=request.user)
+        message = serializer.save(author=request.user, channel=channel)
         for f in files:
             Attachment.objects.create(
                 message=message,

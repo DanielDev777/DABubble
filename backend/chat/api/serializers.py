@@ -47,6 +47,9 @@ class AttachmentSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
+    parent = serializers.PrimaryKeyRelatedField(read_only=True)
+    reply_count = serializers.SerializerMethodField()
+    last_reply_at = serializers.SerializerMethodField()
     content = serializers.CharField(
         required=False, allow_blank=True, max_length=4000, default=""
     )
@@ -54,12 +57,24 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = (
-            "id", "channel", "author", "content",
+            "id", "channel", "parent", "author", "content",
             "created_at", "edited_at", "is_deleted", "attachments",
+            "reply_count", "last_reply_at",
         )
         read_only_fields = (
-            "id", "author", "created_at", "edited_at", "is_deleted", "attachments",
+            "id", "channel", "parent", "author", "created_at", "edited_at",
+            "is_deleted", "attachments", "reply_count", "last_reply_at",
         )
+
+    def get_reply_count(self, obj):
+        val = getattr(obj, "_reply_count", None)
+        return val if val is not None else obj.replies.count()
+
+    def get_last_reply_at(self, obj):
+        if hasattr(obj, "_last_reply_at"):
+            return obj._last_reply_at
+        last = obj.replies.order_by("-created_at").first()
+        return last.created_at if last else None
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
