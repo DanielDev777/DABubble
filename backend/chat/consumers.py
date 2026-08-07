@@ -42,5 +42,10 @@ class ChannelConsumer(AsyncWebsocketConsumer):
 
     async def message_deleted(self, event):
         await self.send(text_data=json.dumps(
-            {"type": "message.deleted", "id": event["id"], "channel": event["channel"]}
+            {
+                "type": "message.deleted",
+                "id": event["id"],
+                "channel": event["channel"],
+                "parent": event.get("parent"),
+            }
         ))

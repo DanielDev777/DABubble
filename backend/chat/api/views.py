@@ -230,27 +230,35 @@ class MessageViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         message = self.get_object()
         channel = message.channel
-        if message.author_id == request.user.id:
+        is_author = message.author_id == request.user.id
+        is_owner = channel.owner_id == request.user.id
+        if not (is_author or is_owner):
+            return Response(
+                {"detail": "You cannot delete this message."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        # Author deleting a message with no replies -> hard delete. Otherwise
+        # (author-with-replies, or owner moderating) -> soft delete to keep the
+        # thread intact.
+        if is_author and not message.replies.exists():
             mid = message.id
+            parent_id = message.parent_id
             message.delete()
             broadcast_to_channel(
                 channel.id,
-                {"type": "message_deleted", "id": mid, "channel": channel.id},
-            )
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        if channel.owner_id == request.user.id:
-            message.is_deleted = True
-            message.content = ""
-            message.save(update_fields=["is_deleted", "content"])
-            broadcast_to_channel(
-                channel.id,
                 {
-                    "type": "message_updated",
-                    "message": self.get_serializer(message).data,
+                    "type": "message_deleted",
+                    "id": mid,
+                    "channel": channel.id,
+                    "parent": parent_id,
                 },
             )
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(
-            {"detail": "You cannot delete this message."},
-            status=status.HTTP_403_FORBIDDEN,
+        message.is_deleted = True
+        message.content = ""
+        message.save(update_fields=["is_deleted", "content"])
+        broadcast_to_channel(
+            channel.id,
+            {"type": "message_updated", "message": self.get_serializer(message).data},
         )
+        return Response(status=status.HTTP_204_NO_CONTENT)
