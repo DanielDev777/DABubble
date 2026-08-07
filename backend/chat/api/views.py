@@ -163,7 +163,18 @@ class MessageViewSet(viewsets.ModelViewSet):
         return self.get_paginated_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        channel = self._member_channel_or_404(request.data.get("channel"))
+        parent_id = request.data.get("parent")
+        if parent_id:
+            parent = self._member_message_or_404(parent_id)
+            if parent.parent_id is not None:
+                return Response(
+                    {"detail": "You can only reply to a top-level message."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            channel = parent.channel
+        else:
+            parent = None
+            channel = self._member_channel_or_404(request.data.get("channel"))
         files = request.FILES.getlist("files")
         content = request.data.get("content", "") or ""
 
@@ -182,7 +193,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        message = serializer.save(author=request.user, channel=channel)
+        message = serializer.save(author=request.user, channel=channel, parent=parent)
         for f in files:
             Attachment.objects.create(
                 message=message,
