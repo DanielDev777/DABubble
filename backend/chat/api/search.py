@@ -39,7 +39,12 @@ class SearchView(APIView):
         )
 
     def _channels(self, request, q):
-        return []
+        return (
+            Channel.objects.filter(members=request.user)
+            .filter(Q(name__icontains=q) | Q(description__icontains=q))
+            .distinct()
+            .order_by("name")[:SEARCH_LIMIT]
+        )
 
     def _messages(self, request, q):
         return []

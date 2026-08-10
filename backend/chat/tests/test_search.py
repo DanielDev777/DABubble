@@ -46,3 +46,38 @@ def test_search_response_has_all_three_keys(make_user, client_for):
     me = make_user("me@example.com")
     data = client_for(me).get("/api/search/?q=x").data
     assert set(data.keys()) == {"users", "channels", "messages"}
+
+
+def _make_channel(client, name, description=""):
+    return client.post(
+        "/api/channels/", {"name": name, "description": description}, format="json"
+    ).data
+
+
+@pytest.mark.django_db
+def test_search_channels_by_name(make_user, client_for):
+    me = make_user("me@example.com")
+    client = client_for(me)
+    _make_channel(client, "Alignment")
+    _make_channel(client, "Random")
+    data = client.get("/api/search/?q=align").data
+    names = {c["name"] for c in data["channels"]}
+    assert names == {"Alignment"}
+
+
+@pytest.mark.django_db
+def test_search_channels_by_description(make_user, client_for):
+    me = make_user("me@example.com")
+    client = client_for(me)
+    _make_channel(client, "General", description="team announcements")
+    data = client.get("/api/search/?q=announce").data
+    assert {c["name"] for c in data["channels"]} == {"General"}
+
+
+@pytest.mark.django_db
+def test_search_excludes_channels_you_are_not_in(make_user, client_for):
+    owner = make_user("owner@example.com")
+    me = make_user("me@example.com")
+    _make_channel(client_for(owner), "SecretPlans")
+    data = client_for(me).get("/api/search/?q=secret").data
+    assert data["channels"] == []
