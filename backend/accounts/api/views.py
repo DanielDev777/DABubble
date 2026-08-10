@@ -219,6 +219,18 @@ class GuestLoginView(APIView):
             is_guest=True,
             default_avatar=random.choice(DEFAULT_AVATAR_SLUGS),
         )
+
+        # Guests land in the seeded demo workspace.
+        from chat.models import Channel, ChannelMembership
+
+        ChannelMembership.objects.bulk_create(
+            [
+                ChannelMembership(channel=channel, user=user)
+                for channel in Channel.objects.filter(is_demo=True)
+            ],
+            ignore_conflicts=True,
+        )
+
         refresh = RefreshToken.for_user(user)
         response = Response(
             {"user": UserSerializer(user, context={"request": request}).data},

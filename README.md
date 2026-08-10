@@ -16,6 +16,14 @@ A Slack-style chat application. Backend: Django REST Framework + PostgreSQL. Fro
    ```
 3. The API is available at http://localhost:8000/
 
+## Demo data
+Populate a demo workspace (demo users, channels, messages, a thread, and
+reactions). Guests who log in are automatically added to these demo channels.
+The command is idempotent — safe to re-run.
+```bash
+docker compose run --rm web python manage.py seed_demo
+```
+
 ## Tests
 ```bash
 docker compose run --rm web pytest

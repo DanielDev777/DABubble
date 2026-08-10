@@ -42,3 +42,46 @@ def test_guest_cookies_authenticate_me():
     me = client.get("/api/auth/me/")
     assert me.status_code == 200
     assert me.data["is_guest"] is True
+
+
+@pytest.mark.django_db
+def test_guest_auto_joins_demo_channels():
+    from chat.models import Channel, ChannelMembership
+
+    owner = User.objects.create_user(
+        email="owner@example.com", full_name="Owner", password="s3cret-pass-123"
+    )
+    demo = Channel.objects.create(name="General", owner=owner, is_demo=True)
+    Channel.objects.create(name="NotDemo", owner=owner, is_demo=False)
+
+    client = APIClient()
+    response = client.post("/api/auth/guest/", format="json")
+    guest_id = response.data["user"]["id"]
+
+    assert ChannelMembership.objects.filter(channel=demo, user_id=guest_id).exists()
+    names = {c["name"] for c in client.get("/api/channels/").data}
+    assert "General" in names
+    assert "NotDemo" not in names
+
+
+@pytest.mark.django_db
+def test_real_signup_does_not_join_demo_channels():
+    from chat.models import Channel, ChannelMembership
+
+    owner = User.objects.create_user(
+        email="owner@example.com", full_name="Owner", password="s3cret-pass-123"
+    )
+    demo = Channel.objects.create(name="General", owner=owner, is_demo=True)
+
+    client = APIClient()
+    client.post(
+        "/api/auth/signup/",
+        {
+            "first_name": "Real", "last_name": "User",
+            "email": "real@example.com", "password": "s3cret-pass-123",
+            "consent": True,
+        },
+        format="json",
+    )
+    real = User.objects.get(email="real@example.com")
+    assert not ChannelMembership.objects.filter(channel=demo, user=real).exists()
