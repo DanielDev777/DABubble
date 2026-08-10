@@ -16,6 +16,9 @@ Screenshot*.png
 Screenshot*.jpg
 *.local.png
 
+# Figma design reference (local only, never commit)
+figma/
+
 # Python
 __pycache__/
 *.py[cod]
