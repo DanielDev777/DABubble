@@ -122,9 +122,11 @@ class MessageViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        return Message.objects.filter(
-            channel__members=self.request.user
-        ).select_related("author", "channel")
+        return (
+            Message.objects.filter(channel__members=self.request.user)
+            .select_related("author", "channel")
+            .prefetch_related("reactions__user")
+        )
 
     def _member_channel_or_404(self, channel_id):
         if channel_id in (None, ""):

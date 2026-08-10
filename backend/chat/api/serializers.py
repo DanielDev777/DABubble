@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from accounts.api.serializers import UserSerializer
 from chat.models import Attachment, Channel, Message
+from chat.reactions import ALLOWED_REACTIONS
 
 
 class ChannelSerializer(serializers.ModelSerializer):
@@ -50,6 +51,7 @@ class MessageSerializer(serializers.ModelSerializer):
     parent = serializers.PrimaryKeyRelatedField(read_only=True)
     reply_count = serializers.SerializerMethodField()
     last_reply_at = serializers.SerializerMethodField()
+    reactions = serializers.SerializerMethodField()
     content = serializers.CharField(
         required=False, allow_blank=True, max_length=4000, default=""
     )
@@ -59,12 +61,28 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = (
             "id", "channel", "parent", "author", "content",
             "created_at", "edited_at", "is_deleted", "attachments",
-            "reply_count", "last_reply_at",
+            "reply_count", "last_reply_at", "reactions",
         )
         read_only_fields = (
             "id", "channel", "parent", "author", "created_at", "edited_at",
-            "is_deleted", "attachments", "reply_count", "last_reply_at",
+            "is_deleted", "attachments", "reply_count", "last_reply_at", "reactions",
         )
+
+    def get_reactions(self, obj):
+        request = self.context.get("request")
+        me = request.user.id if request and request.user.is_authenticated else None
+        buckets = {}
+        for r in obj.reactions.all():
+            bucket = buckets.get(r.emoji)
+            if bucket is None:
+                bucket = {"emoji": r.emoji, "count": 0, "reacted": False, "users": []}
+                buckets[r.emoji] = bucket
+            bucket["count"] += 1
+            bucket["users"].append({"id": r.user_id, "full_name": r.user.full_name})
+            if r.user_id == me:
+                bucket["reacted"] = True
+        order = {emoji: i for i, emoji in enumerate(ALLOWED_REACTIONS)}
+        return sorted(buckets.values(), key=lambda b: order.get(b["emoji"], 999))
 
     def get_reply_count(self, obj):
         val = getattr(obj, "_reply_count", None)
