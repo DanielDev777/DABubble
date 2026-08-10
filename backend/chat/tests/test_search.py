@@ -1,6 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 
+from chat.models import Message
+
 User = get_user_model()
 
 
@@ -81,3 +83,53 @@ def test_search_excludes_channels_you_are_not_in(make_user, client_for):
     _make_channel(client_for(owner), "SecretPlans")
     data = client_for(me).get("/api/search/?q=secret").data
     assert data["channels"] == []
+
+
+@pytest.mark.django_db
+def test_search_messages_in_your_channel(make_user, client_for):
+    me = make_user("me@example.com")
+    client = client_for(me)
+    channel = _make_channel(client, "General")
+    Message.objects.create(
+        channel_id=channel["id"], author=me, content="deploy on friday"
+    )
+    Message.objects.create(
+        channel_id=channel["id"], author=me, content="lunch plans"
+    )
+    data = client.get("/api/search/?q=deploy").data
+    contents = [m["content"] for m in data["messages"]]
+    assert contents == ["deploy on friday"]
+
+
+@pytest.mark.django_db
+def test_search_excludes_messages_from_other_channels(make_user, client_for):
+    owner = make_user("owner@example.com")
+    me = make_user("me@example.com")
+    channel = _make_channel(client_for(owner), "Private")
+    Message.objects.create(
+        channel_id=channel["id"], author=owner, content="secret deploy"
+    )
+    data = client_for(me).get("/api/search/?q=deploy").data
+    assert data["messages"] == []
+
+
+@pytest.mark.django_db
+def test_search_excludes_deleted_messages(make_user, client_for):
+    me = make_user("me@example.com")
+    client = client_for(me)
+    channel = _make_channel(client, "General")
+    msg = Message.objects.create(
+        channel_id=channel["id"], author=me, content="deploy secret"
+    )
+    Message.objects.filter(id=msg.id).update(is_deleted=True)
+    data = client.get("/api/search/?q=deploy").data
+    assert data["messages"] == []
+
+
+@pytest.mark.django_db
+def test_empty_query_returns_empty_groups(make_user, client_for):
+    me = make_user("me@example.com")
+    client = client_for(me)
+    _make_channel(client, "General")
+    data = client.get("/api/search/?q=   ").data
+    assert data == {"users": [], "channels": [], "messages": []}

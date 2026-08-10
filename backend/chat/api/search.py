@@ -47,4 +47,11 @@ class SearchView(APIView):
         )
 
     def _messages(self, request, q):
-        return []
+        return (
+            Message.objects.filter(
+                channel__members=request.user, is_deleted=False, content__icontains=q
+            )
+            .select_related("author", "channel")
+            .prefetch_related("reactions__user", "attachments")
+            .order_by("-created_at")[:SEARCH_LIMIT]
+        )
