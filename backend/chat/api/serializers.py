@@ -69,8 +69,8 @@ class MessageSerializer(serializers.ModelSerializer):
         )
 
     def get_reactions(self, obj):
-        request = self.context.get("request")
-        me = request.user.id if request and request.user.is_authenticated else None
+        user = getattr(self.context.get("request"), "user", None)
+        me = user.id if user is not None and user.is_authenticated else None
         buckets = {}
         for r in obj.reactions.all():
             bucket = buckets.get(r.emoji)

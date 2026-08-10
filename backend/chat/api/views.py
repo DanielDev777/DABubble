@@ -15,7 +15,8 @@ from chat.api.pagination import MessageCursorPagination, ThreadCursorPagination
 from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer, MessageSerializer
 from chat.broadcast import broadcast_to_channel
-from chat.models import Attachment, Channel, ChannelMembership, Message
+from chat.models import Attachment, Channel, ChannelMembership, Message, Reaction
+from chat.reactions import ALLOWED_REACTIONS
 from chat.uploads import MAX_ATTACHMENTS_PER_MESSAGE, validate_attachment
 
 OWNER_ACTIONS = {"update", "partial_update", "destroy", "add_member", "kick", "transfer"}
@@ -264,3 +265,32 @@ class MessageViewSet(viewsets.ModelViewSet):
             {"type": "message_updated", "message": self.get_serializer(message).data},
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def react(self, request, pk=None):
+        message = self._member_message_or_404(pk)
+        emoji = request.data.get("emoji")
+        if emoji not in ALLOWED_REACTIONS:
+            return Response(
+                {"detail": "Unsupported reaction."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if message.is_deleted:
+            return Response(
+                {"detail": "Cannot react to a deleted message."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        existing = Reaction.objects.filter(
+            message=message, user=request.user, emoji=emoji
+        ).first()
+        if existing:
+            existing.delete()
+        else:
+            Reaction.objects.create(message=message, user=request.user, emoji=emoji)
+
+        fresh = self.get_queryset().get(pk=message.pk)
+        data = self.get_serializer(fresh).data
+        broadcast_to_channel(
+            message.channel_id, {"type": "message_updated", "message": data}
+        )
+        return Response(data)
