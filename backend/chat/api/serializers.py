@@ -30,6 +30,8 @@ class ChannelSerializer(serializers.ModelSerializer):
         return obj.members.filter(id=request.user.id).exists()
 
     def validate_name(self, value):
+        if value.lower().startswith("dm:"):
+            raise serializers.ValidationError("This channel name is reserved.")
         qs = Channel.objects.filter(name__iexact=value)
         if self.instance is not None:
             qs = qs.exclude(pk=self.instance.pk)

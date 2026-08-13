@@ -33,6 +33,7 @@ class ChannelViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return (
             Channel.objects.filter(members=self.request.user)
+            .exclude(is_dm=True)
             .distinct()
             .order_by("name")
         )
