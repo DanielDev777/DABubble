@@ -6,6 +6,7 @@
 # Internal working docs (local only)
 docs/superpowers/
 PROJECT.md
+PORTFOLIO_BRIEF.md
 
 # Tooling / local
 .claude/
