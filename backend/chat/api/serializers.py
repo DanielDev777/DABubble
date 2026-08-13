@@ -102,3 +102,31 @@ class MessageSerializer(serializers.ModelSerializer):
             data["content"] = ""
             data["attachments"] = []
         return data
+
+
+class DmSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    other_user = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
+
+    def get_other_user(self, channel):
+        request = self.context.get("request")
+        me = request.user if request else None
+        other = None
+        for member in channel.members.all():
+            if me is None or member.id != me.id:
+                other = member
+                break
+        if other is None:
+            other = me  # self-DM
+        return UserSerializer(other, context=self.context).data
+
+    def get_last_message(self, channel):
+        msg = (
+            channel.messages.filter(is_deleted=False)
+            .order_by("-created_at")
+            .first()
+        )
+        if msg is None:
+            return None
+        return {"content": msg.content, "created_at": msg.created_at}
