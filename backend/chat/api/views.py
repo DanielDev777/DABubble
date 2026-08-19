@@ -128,7 +128,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         return (
             Message.objects.filter(channel__members=self.request.user)
             .select_related("author", "channel")
-            .prefetch_related("reactions__user")
+            .prefetch_related("reactions__user", "mentions__user")
         )
 
     def _member_channel_or_404(self, channel_id):
@@ -229,7 +229,10 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(edited_at=timezone.now())
         sync_mentions(message)
-        data = self.get_serializer(message).data
+        # Re-fetch: get_object() filled the mentions prefetch cache before the
+        # sync, so serializing `message` would report the pre-edit mentions.
+        fresh = self.get_queryset().get(pk=message.pk)
+        data = self.get_serializer(fresh).data
         broadcast_to_channel(
             message.channel_id, {"type": "message_updated", "message": data}
         )
@@ -265,6 +268,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         message.is_deleted = True
         message.content = ""
         message.save(update_fields=["is_deleted", "content"])
+        message.mentions.all().delete()
         broadcast_to_channel(
             channel.id,
             {"type": "message_updated", "message": self.get_serializer(message).data},
