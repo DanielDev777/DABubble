@@ -103,3 +103,20 @@ class Reaction(models.Model):
 
     def __str__(self):
         return f"{self.user} {self.emoji} on {self.message_id}"
+
+
+class Mention(models.Model):
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name="mentions"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mentions",
+    )
+
+    class Meta:
+        unique_together = ("message", "user")
+
+    def __str__(self):
+        return f"{self.user} mentioned in message {self.message_id}"

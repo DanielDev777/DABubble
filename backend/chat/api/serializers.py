@@ -54,6 +54,7 @@ class MessageSerializer(serializers.ModelSerializer):
     reply_count = serializers.SerializerMethodField()
     last_reply_at = serializers.SerializerMethodField()
     reactions = serializers.SerializerMethodField()
+    mentions = serializers.SerializerMethodField()
     content = serializers.CharField(
         required=False, allow_blank=True, max_length=4000, default=""
     )
@@ -63,12 +64,19 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = (
             "id", "channel", "parent", "author", "content",
             "created_at", "edited_at", "is_deleted", "attachments",
-            "reply_count", "last_reply_at", "reactions",
+            "reply_count", "last_reply_at", "reactions", "mentions",
         )
         read_only_fields = (
             "id", "channel", "parent", "author", "created_at", "edited_at",
             "is_deleted", "attachments", "reply_count", "last_reply_at", "reactions",
+            "mentions",
         )
+
+    def get_mentions(self, obj):
+        return [
+            {"id": m.user_id, "full_name": m.user.full_name}
+            for m in obj.mentions.all()
+        ]
 
     def get_reactions(self, obj):
         user = getattr(self.context.get("request"), "user", None)
@@ -101,6 +109,7 @@ class MessageSerializer(serializers.ModelSerializer):
         if instance.is_deleted:
             data["content"] = ""
             data["attachments"] = []
+            data["mentions"] = []
         return data
 
 

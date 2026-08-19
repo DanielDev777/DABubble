@@ -15,6 +15,7 @@ from chat.api.pagination import MessageCursorPagination, ThreadCursorPagination
 from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer, MessageSerializer
 from chat.broadcast import broadcast_to_channel
+from chat.mentions import sync_mentions
 from chat.models import Attachment, Channel, ChannelMembership, Message, Reaction
 from chat.reactions import ALLOWED_REACTIONS
 from chat.uploads import MAX_ATTACHMENTS_PER_MESSAGE, validate_attachment
@@ -127,7 +128,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         return (
             Message.objects.filter(channel__members=self.request.user)
             .select_related("author", "channel")
-            .prefetch_related("reactions__user")
+            .prefetch_related("reactions__user", "mentions__user")
         )
 
     def _member_channel_or_404(self, channel_id):
@@ -206,6 +207,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 content_type=f.content_type,
                 size=f.size,
             )
+        sync_mentions(message)
 
         data = self.get_serializer(message).data
         broadcast_to_channel(channel.id, {"type": "message_created", "message": data})
@@ -226,10 +228,15 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(message, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(edited_at=timezone.now())
+        sync_mentions(message)
+        # Re-fetch: get_object() filled the mentions prefetch cache before the
+        # sync, so serializing `message` would report the pre-edit mentions.
+        fresh = self.get_queryset().get(pk=message.pk)
+        data = self.get_serializer(fresh).data
         broadcast_to_channel(
-            message.channel_id, {"type": "message_updated", "message": serializer.data}
+            message.channel_id, {"type": "message_updated", "message": data}
         )
-        return Response(serializer.data)
+        return Response(data)
 
     def destroy(self, request, *args, **kwargs):
         message = self.get_object()
@@ -261,6 +268,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         message.is_deleted = True
         message.content = ""
         message.save(update_fields=["is_deleted", "content"])
+        message.mentions.all().delete()
         broadcast_to_channel(
             channel.id,
             {"type": "message_updated", "message": self.get_serializer(message).data},
