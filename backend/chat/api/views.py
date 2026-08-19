@@ -228,10 +228,12 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(message, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(edited_at=timezone.now())
+        sync_mentions(message)
+        data = self.get_serializer(message).data
         broadcast_to_channel(
-            message.channel_id, {"type": "message_updated", "message": serializer.data}
+            message.channel_id, {"type": "message_updated", "message": data}
         )
-        return Response(serializer.data)
+        return Response(data)
 
     def destroy(self, request, *args, **kwargs):
         message = self.get_object()

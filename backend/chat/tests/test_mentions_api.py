@@ -113,3 +113,59 @@ def test_soft_deleted_message_reports_no_mentions(make_user, client_for):
 
     listing = owner_client.get(f"/api/messages/?channel={channel['id']}").data
     assert listing["results"][0]["mentions"] == []
+
+
+@pytest.mark.django_db
+def test_edit_adds_a_mention(make_user, client_for):
+    owner = make_user("owner@example.com")
+    noah = _named(make_user, "noah@example.com", "Noah Braun")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+    _add(owner_client, channel["id"], noah)
+    msg = _post(owner_client, channel["id"], "no names here").data
+
+    response = owner_client.patch(
+        f"/api/messages/{msg['id']}/", {"content": "now @Noah Braun"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.data["mentions"] == [{"id": noah.id, "full_name": "Noah Braun"}]
+
+
+@pytest.mark.django_db
+def test_edit_removes_a_mention(make_user, client_for):
+    owner = make_user("owner@example.com")
+    noah = _named(make_user, "noah@example.com", "Noah Braun")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+    _add(owner_client, channel["id"], noah)
+    msg = _post(owner_client, channel["id"], "hey @Noah Braun").data
+
+    response = owner_client.patch(
+        f"/api/messages/{msg['id']}/", {"content": "never mind"}, format="json"
+    )
+
+    assert response.data["mentions"] == []
+    assert Mention.objects.filter(message_id=msg["id"]).count() == 0
+
+
+@pytest.mark.django_db
+def test_edit_keeps_the_row_of_an_unchanged_mention(make_user, client_for):
+    owner = make_user("owner@example.com")
+    noah = _named(make_user, "noah@example.com", "Noah Braun")
+    sofia = _named(make_user, "sofia@example.com", "Sofia Mueller")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+    _add(owner_client, channel["id"], noah)
+    _add(owner_client, channel["id"], sofia)
+    msg = _post(owner_client, channel["id"], "hey @Noah Braun").data
+    row_id = Mention.objects.get(message_id=msg["id"], user=noah).id
+
+    owner_client.patch(
+        f"/api/messages/{msg['id']}/",
+        {"content": "hey @Noah Braun and @Sofia Mueller"},
+        format="json",
+    )
+
+    assert Mention.objects.get(message_id=msg["id"], user=noah).id == row_id
+    assert Mention.objects.filter(message_id=msg["id"]).count() == 2
