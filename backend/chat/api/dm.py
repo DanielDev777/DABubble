@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import F, Max
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +19,17 @@ def dm_name(a_id, b_id):
 
 class DmView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        dms = (
+            Channel.objects.filter(is_dm=True, members=request.user)
+            .prefetch_related("members")
+            .annotate(last_activity=Max("messages__created_at"))
+            .order_by(F("last_activity").desc(nulls_last=True), "-created_at")
+        )
+        return Response(
+            DmSerializer(dms, many=True, context={"request": request}).data
+        )
 
     def post(self, request):
         target = get_object_or_404(User, pk=request.data.get("user_id"))
