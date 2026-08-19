@@ -24,3 +24,92 @@ def test_mentions_are_reachable_from_the_message(make_user):
     Mention.objects.create(message=message, user=author)
     assert message.mentions.count() == 1
     assert message.mentions.first().user_id == author.id
+
+
+def _make_channel(client, name="General"):
+    return client.post("/api/channels/", {"name": name}, format="json").data
+
+
+def _add(owner_client, cid, user):
+    owner_client.post(
+        f"/api/channels/{cid}/add_member/", {"user_id": user.id}, format="json"
+    )
+
+
+def _named(make_user, email, full_name):
+    user = make_user(email)
+    user.full_name = full_name
+    user.save(update_fields=["full_name"])
+    return user
+
+
+def _post(client, cid, content):
+    return client.post(
+        "/api/messages/", {"channel": cid, "content": content}, format="json"
+    )
+
+
+@pytest.mark.django_db
+def test_mention_is_recorded_and_returned(make_user, client_for):
+    owner = make_user("owner@example.com")
+    noah = _named(make_user, "noah@example.com", "Noah Braun")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+    _add(owner_client, channel["id"], noah)
+
+    response = _post(owner_client, channel["id"], "hey @Noah Braun look")
+
+    assert response.status_code == 201
+    assert response.data["mentions"] == [{"id": noah.id, "full_name": "Noah Braun"}]
+    assert Mention.objects.filter(message_id=response.data["id"]).count() == 1
+
+
+@pytest.mark.django_db
+def test_non_member_name_is_ignored(make_user, client_for):
+    owner = make_user("owner@example.com")
+    _named(make_user, "outsider@example.com", "Elise Roth")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+
+    response = _post(owner_client, channel["id"], "hey @Elise Roth")
+
+    assert response.data["mentions"] == []
+    assert Mention.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_self_mention_is_recorded(make_user, client_for):
+    owner = _named(make_user, "owner@example.com", "Ada Owner")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+
+    response = _post(owner_client, channel["id"], "note to @Ada Owner")
+
+    assert response.data["mentions"] == [{"id": owner.id, "full_name": "Ada Owner"}]
+
+
+@pytest.mark.django_db
+def test_mention_in_a_dm_resolves_the_participant(make_user, client_for):
+    me = make_user("me@example.com")
+    other = _named(make_user, "other@example.com", "Sofia Mueller")
+    client = client_for(me)
+    dm = client.post("/api/dm/", {"user_id": other.id}, format="json").data
+
+    response = _post(client, dm["id"], "hi @Sofia Mueller")
+
+    assert response.data["mentions"] == [{"id": other.id, "full_name": "Sofia Mueller"}]
+
+
+@pytest.mark.django_db
+def test_soft_deleted_message_reports_no_mentions(make_user, client_for):
+    owner = _named(make_user, "owner@example.com", "Ada Owner")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+    msg = _post(owner_client, channel["id"], "ping @Ada Owner").data
+
+    message = Message.objects.get(pk=msg["id"])
+    message.is_deleted = True
+    message.save(update_fields=["is_deleted"])
+
+    listing = owner_client.get(f"/api/messages/?channel={channel['id']}").data
+    assert listing["results"][0]["mentions"] == []

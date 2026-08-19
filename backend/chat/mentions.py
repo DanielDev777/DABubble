@@ -47,3 +47,27 @@ def resolve_mentions(content, candidates):
                 found.append(user)
             break
     return found
+
+
+def sync_mentions(message):
+    """Make `message`'s Mention rows match its current content.
+
+    Resolves against the members of the message's channel (for a DM, its two
+    participants) and returns the resolved users. Diff-based on purpose: rows
+    that survive an edit keep their primary keys, which Part 8b's notifications
+    will depend on.
+    """
+    from chat.models import Mention
+
+    users = resolve_mentions(message.content, message.channel.members.all())
+    wanted = {user.id for user in users}
+    existing = set(
+        Mention.objects.filter(message=message).values_list("user_id", flat=True)
+    )
+    stale = existing - wanted
+    if stale:
+        Mention.objects.filter(message=message, user_id__in=stale).delete()
+    Mention.objects.bulk_create(
+        [Mention(message=message, user_id=uid) for uid in wanted - existing]
+    )
+    return users
