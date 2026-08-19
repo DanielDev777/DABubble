@@ -12,6 +12,7 @@ class Channel(models.Model):
         related_name="owned_channels",
     )
     is_demo = models.BooleanField(default=False)
+    is_dm = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     members = models.ManyToManyField(
