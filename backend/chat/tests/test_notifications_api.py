@@ -113,3 +113,104 @@ def test_summary_counts_unread_per_channel(make_user, client_for):
 
     assert summary["unread_total"] == 3
     assert summary["by_channel"] == {str(first["id"]): 1, str(second["id"]): 2}
+
+
+def _two_channels_with_mentions(make_user, client_for):
+    """Return (noah, noah_client, first_channel, second_channel) with 1 + 2 unread."""
+    owner = make_user("owner@example.com")
+    noah = _named(make_user, "noah@example.com", "Noah Braun")
+    owner_client = client_for(owner)
+    first = _make_channel(owner_client, "One")
+    second = _make_channel(owner_client, "Two")
+    _add(owner_client, first["id"], noah)
+    _add(owner_client, second["id"], noah)
+    _post(owner_client, first["id"], "a @Noah Braun")
+    _post(owner_client, second["id"], "b @Noah Braun")
+    _post(owner_client, second["id"], "c @Noah Braun")
+    return noah, client_for(noah), first, second
+
+
+@pytest.mark.django_db
+def test_mark_read_by_ids(make_user, client_for):
+    noah, noah_client, _, _ = _two_channels_with_mentions(make_user, client_for)
+    target = Notification.objects.filter(user=noah).first()
+
+    response = noah_client.post(
+        "/api/notifications/read/", {"ids": [target.id]}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.data == {"marked": 1, "unread_total": 2}
+    target.refresh_from_db()
+    assert target.is_read is True
+
+
+@pytest.mark.django_db
+def test_mark_read_by_channel(make_user, client_for):
+    noah, noah_client, _, second = _two_channels_with_mentions(make_user, client_for)
+
+    response = noah_client.post(
+        "/api/notifications/read/", {"channel": second["id"]}, format="json"
+    )
+
+    assert response.data == {"marked": 2, "unread_total": 1}
+    assert (
+        Notification.objects.filter(
+            user=noah, message__channel_id=second["id"], is_read=False
+        ).count()
+        == 0
+    )
+
+
+@pytest.mark.django_db
+def test_mark_read_all(make_user, client_for):
+    noah, noah_client, _, _ = _two_channels_with_mentions(make_user, client_for)
+
+    response = noah_client.post(
+        "/api/notifications/read/", {"all": True}, format="json"
+    )
+
+    assert response.data == {"marked": 3, "unread_total": 0}
+
+
+@pytest.mark.django_db
+def test_marking_an_already_read_row_is_a_no_op(make_user, client_for):
+    noah, noah_client, _, _ = _two_channels_with_mentions(make_user, client_for)
+    target = Notification.objects.filter(user=noah).first()
+    noah_client.post("/api/notifications/read/", {"ids": [target.id]}, format="json")
+
+    response = noah_client.post(
+        "/api/notifications/read/", {"ids": [target.id]}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.data == {"marked": 0, "unread_total": 2}
+
+
+@pytest.mark.django_db
+def test_empty_or_ambiguous_body_is_rejected(make_user, client_for):
+    _, noah_client, first, _ = _two_channels_with_mentions(make_user, client_for)
+
+    assert noah_client.post(
+        "/api/notifications/read/", {}, format="json"
+    ).status_code == 400
+    assert noah_client.post(
+        "/api/notifications/read/",
+        {"all": True, "channel": first["id"]},
+        format="json",
+    ).status_code == 400
+
+
+@pytest.mark.django_db
+def test_another_users_ids_are_ignored(make_user, client_for):
+    noah, _, _, _ = _two_channels_with_mentions(make_user, client_for)
+    stranger = make_user("stranger@example.com")
+    theirs = Notification.objects.filter(user=noah).first()
+
+    response = client_for(stranger).post(
+        "/api/notifications/read/", {"ids": [theirs.id]}, format="json"
+    )
+
+    assert response.data == {"marked": 0, "unread_total": 0}
+    theirs.refresh_from_db()
+    assert theirs.is_read is False
