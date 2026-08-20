@@ -1,3 +1,4 @@
+from chat.broadcast import broadcast_to_user
 from chat.models import Notification
 
 
@@ -46,9 +47,23 @@ def sync_notifications(message, mentioned_users):
     for user_id, kind in wanted.items():
         note = existing.get(user_id)
         if note is None:
-            Notification.objects.create(
+            created = Notification.objects.create(
                 message=message, user_id=user_id, kind=kind
             )
+            _push(created)
         elif note.kind != kind:
             note.kind = kind
             note.save(update_fields=["kind"])
+
+
+def _push(note):
+    """Send a freshly created notification to its recipient, if connected."""
+    from chat.api.serializers import NotificationSerializer
+
+    broadcast_to_user(
+        note.user_id,
+        {
+            "type": "notification.created",
+            "notification": NotificationSerializer(note).data,
+        },
+    )

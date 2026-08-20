@@ -214,3 +214,40 @@ def test_another_users_ids_are_ignored(make_user, client_for):
     assert response.data == {"marked": 0, "unread_total": 0}
     theirs.refresh_from_db()
     assert theirs.is_read is False
+
+
+@pytest.mark.django_db
+def test_new_notification_is_pushed_to_the_recipient(make_user, client_for):
+    from unittest.mock import patch
+
+    owner = make_user("owner@example.com")
+    noah = _named(make_user, "noah@example.com", "Noah Braun")
+    owner_client = client_for(owner)
+    channel = _make_channel(owner_client)
+    _add(owner_client, channel["id"], noah)
+
+    with patch("chat.notifications.broadcast_to_user") as mock_push:
+        _post(owner_client, channel["id"], "hey @Noah Braun")
+
+    assert mock_push.called
+    user_id, event = mock_push.call_args[0]
+    assert user_id == noah.id
+    assert event["type"] == "notification.created"
+    assert event["notification"]["kind"] == "mention"
+    assert event["notification"]["message"]["content"] == "hey @Noah Braun"
+
+
+@pytest.mark.django_db
+def test_relabelled_notification_is_not_pushed_again(make_user, client_for):
+    from unittest.mock import patch
+
+    me = make_user("me@example.com")
+    other = _named(make_user, "other@example.com", "Noah Braun")
+    client = client_for(me)
+    dm = client.post("/api/dm/", {"user_id": other.id}, format="json").data
+    msg = _post(client, dm["id"], "hi @Noah Braun")
+
+    with patch("chat.notifications.broadcast_to_user") as mock_push:
+        client.patch(f"/api/messages/{msg['id']}/", {"content": "hi"}, format="json")
+
+    assert mock_push.called is False
