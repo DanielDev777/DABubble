@@ -52,5 +52,7 @@ def neutralize_broadcast():
     later tests. Broadcast wiring is asserted via local patches in the
     broadcast tests; real delivery is covered by the async consumer tests.
     """
-    with patch("chat.api.views.broadcast_to_channel"):
+    with patch("chat.api.views.broadcast_to_channel"), patch(
+        "chat.notifications.broadcast_to_user"
+    ):
         yield

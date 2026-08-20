@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from accounts.api.serializers import UserSerializer
-from chat.models import Attachment, Channel, Message
+from chat.models import Attachment, Channel, Message, Notification
 from chat.reactions import ALLOWED_REACTIONS
 
 
@@ -139,3 +139,26 @@ class DmSerializer(serializers.Serializer):
         if msg is None:
             return None
         return {"content": msg.content, "created_at": msg.created_at}
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    channel = serializers.SerializerMethodField()
+    message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = ("id", "kind", "is_read", "created_at", "channel", "message")
+        read_only_fields = fields
+
+    def get_channel(self, obj):
+        channel = obj.message.channel
+        return {"id": channel.id, "name": channel.name, "is_dm": channel.is_dm}
+
+    def get_message(self, obj):
+        message = obj.message
+        return {
+            "id": message.id,
+            "author": UserSerializer(message.author, context=self.context).data,
+            "content": message.content,
+            "created_at": message.created_at,
+        }

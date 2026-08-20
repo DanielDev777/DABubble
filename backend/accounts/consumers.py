@@ -40,6 +40,9 @@ class PresenceConsumer(AsyncWebsocketConsumer):
             return
         self.user_id = user.id
         await self.channel_layer.group_add(PRESENCE_GROUP, self.channel_name)
+        await self.channel_layer.group_add(
+            f"user_{self.user_id}", self.channel_name
+        )
         await self.accept()
 
         count = await _increment(self.user_id)
@@ -57,6 +60,9 @@ class PresenceConsumer(AsyncWebsocketConsumer):
             return
         count = await _decrement(self.user_id)
         await self.channel_layer.group_discard(PRESENCE_GROUP, self.channel_name)
+        await self.channel_layer.group_discard(
+            f"user_{self.user_id}", self.channel_name
+        )
         if count == 0:
             await self.channel_layer.group_send(
                 PRESENCE_GROUP,
@@ -69,5 +75,13 @@ class PresenceConsumer(AsyncWebsocketConsumer):
                 "type": "presence.update",
                 "user_id": event["user_id"],
                 "is_online": event["is_online"],
+            }
+        ))
+
+    async def notification_created(self, event):
+        await self.send(text_data=json.dumps(
+            {
+                "type": "notification.created",
+                "notification": event["notification"],
             }
         ))

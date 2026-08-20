@@ -88,3 +88,31 @@ async def test_other_client_receives_online_broadcast():
 
     await comm_l.disconnect()
     await comm_m.disconnect()
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_connect_joins_the_per_user_group():
+    from channels.layers import get_channel_layer
+
+    user = await make_user("grouped@example.com")
+    comm, connected = await _connect(user)
+    assert connected is True
+    await comm.receive_json_from()  # presence.snapshot
+
+    layer = get_channel_layer()
+    await layer.group_send(
+        f"user_{user.id}",
+        {"type": "notification.created", "notification": {"id": 1, "kind": "dm"}},
+    )
+    # This socket also receives its own presence.update, so drain until the
+    # pushed notification shows up.
+    pushed = None
+    for _ in range(5):
+        received = await comm.receive_json_from()
+        if received["type"] == "notification.created":
+            pushed = received
+            break
+    assert pushed is not None
+    assert pushed["notification"]["kind"] == "dm"
+
+    await comm.disconnect()
