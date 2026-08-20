@@ -230,7 +230,8 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(message, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(edited_at=timezone.now())
-        sync_mentions(message)
+        mentioned = sync_mentions(message)
+        sync_notifications(message, mentioned)
         # Re-fetch: get_object() filled the mentions prefetch cache before the
         # sync, so serializing `message` would report the pre-edit mentions.
         fresh = self.get_queryset().get(pk=message.pk)
@@ -271,6 +272,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         message.content = ""
         message.save(update_fields=["is_deleted", "content"])
         message.mentions.all().delete()
+        message.notifications.all().delete()
         broadcast_to_channel(
             channel.id,
             {"type": "message_updated", "message": self.get_serializer(message).data},
