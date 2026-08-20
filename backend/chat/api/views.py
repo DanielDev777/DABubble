@@ -16,6 +16,7 @@ from chat.api.permissions import IsChannelOwner
 from chat.api.serializers import ChannelSerializer, MessageSerializer
 from chat.broadcast import broadcast_to_channel
 from chat.mentions import sync_mentions
+from chat.notifications import sync_notifications
 from chat.models import Attachment, Channel, ChannelMembership, Message, Reaction
 from chat.reactions import ALLOWED_REACTIONS
 from chat.uploads import MAX_ATTACHMENTS_PER_MESSAGE, validate_attachment
@@ -207,7 +208,8 @@ class MessageViewSet(viewsets.ModelViewSet):
                 content_type=f.content_type,
                 size=f.size,
             )
-        sync_mentions(message)
+        mentioned = sync_mentions(message)
+        sync_notifications(message, mentioned)
 
         data = self.get_serializer(message).data
         broadcast_to_channel(channel.id, {"type": "message_created", "message": data})
