@@ -120,3 +120,34 @@ class Mention(models.Model):
 
     def __str__(self):
         return f"{self.user} mentioned in message {self.message_id}"
+
+
+class Notification(models.Model):
+    MENTION = "mention"
+    DM = "dm"
+    REPLY = "reply"
+    KINDS = [
+        (MENTION, "Mention"),
+        (DM, "Direct message"),
+        (REPLY, "Reply"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name="notifications"
+    )
+    kind = models.CharField(max_length=10, choices=KINDS)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ("user", "message")
+        indexes = [models.Index(fields=["user", "is_read"])]
+
+    def __str__(self):
+        return f"{self.kind} for {self.user} on message {self.message_id}"
