@@ -41,3 +41,25 @@ def test_body_contains_a_frontend_reset_link(user, mailoutbox):
 def test_body_greets_the_user_by_name(user, mailoutbox):
     send_password_reset_email(user)
     assert "Ada Lovelace" in mailoutbox[0].body
+
+
+@pytest.mark.django_db
+def test_link_is_not_html_escaped(user, mailoutbox):
+    # Django autoescapes every template, .txt included: an escaped "&" would
+    # hand the frontend an "amp;token" parameter and break every reset.
+    send_password_reset_email(user)
+    body = mailoutbox[0].body
+    assert "&amp;" not in body
+    assert "&token=" in body
+
+
+@pytest.mark.django_db
+def test_emailed_link_survives_a_round_trip(user, mailoutbox):
+    from urllib.parse import parse_qs, urlparse
+
+    send_password_reset_email(user)
+    link = next(
+        word for word in mailoutbox[0].body.split() if word.startswith("http")
+    )
+    params = parse_qs(urlparse(link).query)
+    assert set(params) == {"uid", "token"}
