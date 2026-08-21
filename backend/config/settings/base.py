@@ -94,6 +94,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_THROTTLE_RATES": {
+        "password_reset": "5/hour",
+    },
 }
 
 SIMPLE_JWT = {
@@ -118,6 +121,21 @@ CSRF_TRUSTED_ORIGINS = get_list_env("CORS_ALLOWED_ORIGINS", default=["http://loc
 
 GOOGLE_AUTH_CLIENT_ID = get_env("GOOGLE_AUTH_CLIENT_ID", default="")
 GOOGLE_AUTH_CLIENT_SECRET = get_env("GOOGLE_AUTH_CLIENT_SECRET", default="")
+
+FRONTEND_URL = get_env("FRONTEND_URL", default="http://localhost:4200").rstrip("/")
+
+EMAIL_BACKEND = get_env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = get_env("EMAIL_HOST", default="")
+EMAIL_PORT = int(get_env("EMAIL_PORT", default="587"))
+EMAIL_HOST_USER = get_env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = get_env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = get_bool_env("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = get_env("DEFAULT_FROM_EMAIL", default="noreply@dabubble.local")
+
+# Lifetime of a password-reset link, in seconds (Django reads this setting).
+PASSWORD_RESET_TIMEOUT = int(get_env("PASSWORD_RESET_TIMEOUT", default="3600"))
 
 REDIS_HOST = get_env("REDIS_HOST", default="redis")
 REDIS_PORT = get_env("REDIS_PORT", default="6379")

@@ -33,3 +33,22 @@ def test_refresh_without_cookie_is_rejected():
     client = APIClient()
     response = client.post("/api/auth/refresh/", format="json")
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_rotated_refresh_token_is_recorded_as_outstanding():
+    from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+    user = User.objects.create_user(
+        email="rotate@example.com", full_name="Rotate", password="s3cret-pass-123"
+    )
+    client = APIClient()
+    client.post(
+        "/api/auth/login/",
+        {"email": user.email, "password": "s3cret-pass-123"},
+        format="json",
+    )
+    assert client.post("/api/auth/refresh/").status_code == 200
+
+    rotated = client.cookies[settings.AUTH_COOKIE_REFRESH].value
+    assert OutstandingToken.objects.filter(user=user, token=rotated).exists()
