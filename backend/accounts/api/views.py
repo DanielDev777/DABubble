@@ -118,7 +118,15 @@ class LogoutView(APIView):
         return response
 
 
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class MeView(APIView):
+    """Current user, and the endpoint that re-seats the CSRF cookie.
+
+    The SPA restores its session by calling this on startup. The JWT cookies can
+    outlive the CSRF cookie, so a restored session would otherwise be able to
+    read but never write.
+    """
+
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 

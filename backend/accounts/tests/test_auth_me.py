@@ -32,3 +32,26 @@ def test_me_requires_authentication():
     client = APIClient()
     response = client.get("/api/auth/me/")
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_me_sets_the_csrf_cookie(logged_in_client):
+    response = logged_in_client.get("/api/auth/me/")
+    assert response.status_code == 200
+    assert "csrftoken" in response.cookies
+
+
+@pytest.mark.django_db
+def test_me_restores_a_csrf_cookie_that_was_lost(logged_in_client):
+    # The JWT cookies can outlive the CSRF cookie (cleared site data, cookie
+    # pruning). Without this, a restored session could read but never write.
+    del logged_in_client.cookies["csrftoken"]
+
+    response = logged_in_client.get("/api/auth/me/")
+    assert "csrftoken" in response.cookies
+
+    token = response.cookies["csrftoken"].value
+    patched = logged_in_client.patch(
+        "/api/auth/me/", {"full_name": "Alice Renamed"}, format="json", HTTP_X_CSRFTOKEN=token
+    )
+    assert patched.status_code == 200
