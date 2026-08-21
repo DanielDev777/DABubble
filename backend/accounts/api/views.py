@@ -10,16 +10,19 @@ from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.api.serializers import (
     LoginSerializer,
+    PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     SignupSerializer,
     UserSerializer,
 )
+from accounts.emails import send_password_reset_email
 from accounts.google import GoogleTokenError, verify_google_id_token
 from accounts.models import DEFAULT_AVATAR_SLUGS, User
 
@@ -238,3 +241,33 @@ class GuestLoginView(APIView):
         )
         set_auth_cookies(response, refresh.access_token, refresh)
         return response
+
+
+class PasswordResetRequestView(APIView):
+    """Mail a reset link to the address, if it belongs to a resettable account.
+
+    Always answers 200 for a well-formed address. Reporting whether the account
+    exists would turn this endpoint into an account-existence oracle.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = User.objects.filter(
+            email__iexact=serializer.validated_data["email"],
+            is_guest=False,
+            is_active=True,
+        ).first()
+        if user:
+            send_password_reset_email(user)
+
+        return Response(
+            {"detail": "If that email exists, a reset link has been sent."},
+            status=status.HTTP_200_OK,
+        )
