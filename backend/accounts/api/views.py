@@ -17,12 +17,19 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.api.serializers import (
     LoginSerializer,
+    PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     SignupSerializer,
     UserSerializer,
 )
 from accounts.emails import send_password_reset_email
+from accounts.tokens import (
+    check_reset_token,
+    get_user_from_uid,
+    record_outstanding_token,
+    revoke_refresh_tokens,
+)
 from accounts.google import GoogleTokenError, verify_google_id_token
 from accounts.models import DEFAULT_AVATAR_SLUGS, User
 
@@ -88,6 +95,7 @@ class RefreshView(APIView):
             refresh.set_jti()
             refresh.set_exp()
             refresh.set_iat()
+            record_outstanding_token(refresh)
 
         response = Response(status=status.HTTP_200_OK)
         set_auth_cookies(response, access, refresh)
@@ -270,4 +278,42 @@ class PasswordResetRequestView(APIView):
         return Response(
             {"detail": "If that email exists, a reset link has been sent."},
             status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """Set a new password for the account a valid reset link points at.
+
+    Link problems answer with a generic top-level ``detail`` (never saying which
+    part was wrong); password problems answer with field errors, so the frontend
+    knows which message belongs under which control. Password validation runs
+    first, so a rejected password does not consume an otherwise valid link.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = get_user_from_uid(data["uid"])
+        if (
+            user is None
+            or user.is_guest
+            or not user.is_active
+            or not check_reset_token(user, data["token"])
+        ):
+            return Response(
+                {"detail": "Invalid or expired reset link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(data["password"])
+        user.save(update_fields=["password"])
+        revoke_refresh_tokens(user)
+
+        return Response(
+            {"detail": "Password has been reset."}, status=status.HTTP_200_OK
         )

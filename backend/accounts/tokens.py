@@ -42,3 +42,40 @@ def make_reset_link(user):
     uid = make_uid(user)
     token = default_token_generator.make_token(user)
     return f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+
+
+def revoke_refresh_tokens(user):
+    """Blacklist every outstanding refresh token for a user.
+
+    Called after a password reset: the plausible reason for resetting is that
+    somebody else has access, so existing sessions should not survive it.
+    """
+    from rest_framework_simplejwt.token_blacklist.models import (
+        BlacklistedToken,
+        OutstandingToken,
+    )
+
+    for token in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=token)
+
+
+def record_outstanding_token(refresh):
+    """Register a rotated refresh token in the blacklist app's ledger.
+
+    ``RefreshToken.for_user()`` writes this row itself, but a token rotated in
+    place with ``set_jti()`` never passes through it. Without this, rotated
+    tokens are invisible to bulk revocation.
+    """
+    from rest_framework_simplejwt.settings import api_settings
+    from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+    from rest_framework_simplejwt.utils import datetime_from_epoch
+
+    OutstandingToken.objects.get_or_create(
+        jti=refresh[api_settings.JTI_CLAIM],
+        defaults={
+            "user_id": refresh.get(api_settings.USER_ID_CLAIM),
+            "token": str(refresh),
+            "created_at": refresh.current_time,
+            "expires_at": datetime_from_epoch(refresh["exp"]),
+        },
+    )
