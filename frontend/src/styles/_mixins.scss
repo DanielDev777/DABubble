@@ -1,0 +1,37 @@
+// Breakpoints derived from the Figma frames: the set contains a 1920x1080
+// desktop design and a 430x932 mobile design, and nothing in between — so there
+// is exactly one point where the three-pane layout collapses to a single pane.
+// Never write a raw media query outside this file.
+
+$bp-desktop: 1024px;
+$bp-phone: 480px;
+
+@mixin desktop {
+  @media (min-width: $bp-desktop) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @media (max-width: #{$bp-desktop - 0.02px}) {
+    @content;
+  }
+}
+
+@mixin phone {
+  @media (max-width: $bp-phone) {
+    @content;
+  }
+}
+
+/// Visible keyboard focus, consistent everywhere.
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: $offset;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
