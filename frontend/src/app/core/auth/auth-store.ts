@@ -1,6 +1,6 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, map, Observable, of, tap } from 'rxjs';
+import { catchError, firstValueFrom, map, Observable, of, tap } from 'rxjs';
 
 import { User } from './user';
 
@@ -56,15 +56,11 @@ export class AuthStore {
    * rejects when logged out, so app bootstrap never fails for a visitor.
    */
   restore(): Promise<void> {
-    return new Promise((resolve) => {
-      this.http
-        .get<User>('/api/auth/me/')
-        .pipe(catchError((error: HttpErrorResponse) => of(error.status === 401 ? null : null)))
-        .subscribe((user) => {
-          this.currentUser.set(user);
-          resolve();
-        });
-    });
+    return firstValueFrom(
+      // Any failure here means "start logged out" — a 401 because there is no
+      // session, anything else because a visitor should still get an app.
+      this.http.get<User>('/api/auth/me/').pipe(catchError(() => of(null))),
+    ).then((user) => this.currentUser.set(user));
   }
 
   clear(): void {
