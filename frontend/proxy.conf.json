@@ -1,0 +1,15 @@
+{
+  "/api": {
+    "target": "http://web:8000",
+    "secure": false
+  },
+  "/media": {
+    "target": "http://web:8000",
+    "secure": false
+  },
+  "/ws": {
+    "target": "http://web:8000",
+    "secure": false,
+    "ws": true
+  }
+}

@@ -1,0 +1,38 @@
+<!-- Temporary token preview. Replaced by the real shell in Part 9b. -->
+<main class="preview">
+  <h1>DABubble</h1>
+  <h2>Design-Tokens</h2>
+
+  <section class="card">
+    <h3>Farben</h3>
+    <ul class="swatches">
+      @for (swatch of swatches; track swatch.name) {
+        <li>
+          <span class="chip" [style.background]="'var(' + swatch.token + ')'"></span>
+          <strong>{{ swatch.name }}</strong>
+          <code>{{ swatch.token }}</code>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="card">
+    <h3>Typografie</h3>
+    <p class="t-3xl">Passwort zurücksetzen — 44px</p>
+    <p class="t-2xl">Konto erstellen — 32px</p>
+    <p class="t-xl">Entwicklerteam — 24px</p>
+    <p class="t-lg">Noah Braun — 18px</p>
+    <p>Fließtext, wie er in Nachrichten erscheint — 16px</p>
+    <p class="t-sm muted">Hilfetext und Labels — 14px</p>
+    <p class="t-xs muted">Heute, 14:25 — 12px</p>
+  </section>
+
+  <section class="card">
+    <h3>Form</h3>
+    <div class="shapes">
+      <span class="pill">Pill · 100px</span>
+      <span class="tile">Card · 30px</span>
+      <span class="dot" title="online"></span>
+    </div>
+  </section>
+</main>

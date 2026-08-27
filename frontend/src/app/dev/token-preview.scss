@@ -1,0 +1,86 @@
+// Temporary preview styling. Removed with the preview page in Part 9b.
+@use '../../styles/mixins' as *;
+
+.preview {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+  display: grid;
+  gap: var(--space-5);
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.swatches {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+}
+
+.chip {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  flex: none;
+}
+
+code {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+p { margin: 0; }
+
+.t-3xl { font-size: var(--text-3xl); font-weight: var(--weight-bold); color: var(--color-primary); }
+.t-2xl { font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-primary); }
+.t-xl  { font-size: var(--text-xl); font-weight: var(--weight-semibold); }
+.t-lg  { font-size: var(--text-lg); }
+.t-sm  { font-size: var(--text-sm); }
+.t-xs  { font-size: var(--text-xs); }
+.muted { color: var(--color-text-muted); }
+
+.shapes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pill {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-5);
+  font-weight: var(--weight-semibold);
+}
+
+.tile {
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+}
+
+.dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--color-online);
+}
+
+@include mobile {
+  .preview { padding: var(--space-4) var(--space-3); }
+}
