@@ -7,7 +7,7 @@ export const routes: Routes = [
   {
     path: 'login',
     canActivate: [guestGuard],
-    loadComponent: () => import('./auth/login-placeholder'),
+    loadComponent: () => import('./auth/login'),
   },
   {
     path: 'workspace',
