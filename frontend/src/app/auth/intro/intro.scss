@@ -1,0 +1,59 @@
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg);
+  animation: settle 1.6s var(--easing) forwards;
+
+  img {
+    height: 8rem;
+    animation: shrink 1.6s var(--easing) forwards;
+  }
+}
+
+/* Already played this session: skip straight to the hidden state. */
+.intro.done {
+  opacity: 0;
+  visibility: hidden;
+
+  &,
+  img {
+    animation: none;
+  }
+}
+
+@keyframes settle {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes shrink {
+  0%,
+  40% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0.55) translate(-38vw, -40vh);
+  }
+}
+
+/* A full-screen zoom is exactly what this setting exists for. */
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    opacity: 0;
+    visibility: hidden;
+
+    &,
+    img {
+      animation: none;
+    }
+  }
+}
