@@ -21,6 +21,6 @@ export function avatarSrc(user: User | null): string {
   if (!user) return FALLBACK_AVATAR;
   if (user.avatar) return user.avatar;
   if (user.avatar_url) return user.avatar_url;
-  if (user.default_avatar) return `/avatars/${user.default_avatar}.svg`;
+  if (user.default_avatar) return `/avatars/${user.default_avatar}.png`;
   return FALLBACK_AVATAR;
 }

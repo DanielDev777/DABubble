@@ -50,7 +50,7 @@ describe('Avatar', () => {
     await fixture.whenStable();
 
     const img = fixture.nativeElement.querySelector('img') as HTMLImageElement;
-    expect(img.getAttribute('src')).toBe('/avatars/quiff.svg');
+    expect(img.getAttribute('src')).toBe('/avatars/quiff.png');
   });
 
   it('names the person in the alt text', async () => {

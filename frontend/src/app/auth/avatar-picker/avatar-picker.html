@@ -1,0 +1,35 @@
+<app-auth-layout>
+  <header class="card-header">
+    <a class="back" routerLink="/signup" aria-label="Zurück">
+      <img src="/icons/arrow-back.svg" alt="" width="24" height="24" />
+    </a>
+    <h1>Wähle deinen Avatar</h1>
+  </header>
+
+  <img class="preview" [src]="preview()" alt="" />
+  <p class="name">{{ auth.user()?.full_name }}</p>
+
+  <p class="hint">Aus der Liste wählen</p>
+  <ul class="choices">
+    @for (slug of slugs; track slug) {
+      <li>
+        <button
+          type="button"
+          [class.selected]="selected() === slug"
+          [attr.aria-pressed]="selected() === slug"
+          [attr.aria-label]="'Avatar ' + slug"
+          [attr.data-testid]="'avatar-' + slug"
+          (click)="selected.set(slug)"
+        >
+          <img [src]="'/avatars/' + slug + '.png'" alt="" />
+        </button>
+      </li>
+    }
+  </ul>
+
+  <div class="actions">
+    <button appButton data-testid="avatar-continue" [disabled]="!selected() || busy()" (click)="save()">
+      Weiter
+    </button>
+  </div>
+</app-auth-layout>
