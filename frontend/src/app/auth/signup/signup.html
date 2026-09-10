@@ -1,0 +1,53 @@
+<app-auth-layout>
+  <header class="card-header">
+    <a class="back" routerLink="/login" aria-label="Zurück zur Anmeldung">
+      <img src="/icons/arrow-back.svg" alt="" width="24" height="24" />
+    </a>
+    <h1>Konto erstellen</h1>
+  </header>
+
+  <p class="lead">Mit deinem Namen und deiner E-Mail-Adresse hast du dein neues DABubble-Konto.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <app-text-field
+      formControlName="name"
+      placeholder="Name und Nachname"
+      icon="/icons/person.svg"
+      autocomplete="name"
+      [error]="nameError()"
+    />
+
+    <app-text-field
+      formControlName="email"
+      type="email"
+      placeholder="beispielname@email.com"
+      icon="/icons/mail.svg"
+      autocomplete="email"
+      [error]="emailError()"
+    />
+
+    <app-text-field
+      formControlName="password"
+      type="password"
+      placeholder="Passwort"
+      icon="/icons/lock.svg"
+      autocomplete="new-password"
+      [error]="passwordError()"
+    />
+
+    <label class="consent">
+      <input type="checkbox" formControlName="consent" />
+      <span>Ich stimme der <a routerLink="/datenschutz">Datenschutzerklärung</a> zu.</span>
+    </label>
+
+    @if (formError()) {
+      <p class="form-error" role="alert">{{ formError() }}</p>
+    }
+
+    <div class="actions">
+      <button appButton type="submit" data-testid="signup" [disabled]="form.invalid || busy()">
+        Weiter
+      </button>
+    </div>
+  </form>
+</app-auth-layout>
