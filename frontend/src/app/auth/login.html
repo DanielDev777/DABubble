@@ -1,0 +1,62 @@
+<app-auth-layout [showSignupLink]="true">
+  <h1>Anmeldung</h1>
+  <p class="lead">
+    Wir empfehlen dir, die E-Mail-Adresse zu nutzen, die du bei der Arbeit verwendest.
+  </p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <app-text-field
+      formControlName="email"
+      type="email"
+      placeholder="beispielname@email.com"
+      icon="/icons/mail.svg"
+      autocomplete="email"
+      [error]="emailError()"
+    />
+
+    <app-text-field
+      formControlName="password"
+      type="password"
+      placeholder="Passwort"
+      icon="/icons/lock.svg"
+      autocomplete="current-password"
+      [error]="passwordError()"
+    />
+
+    <a class="forgot" routerLink="/passwort-vergessen">Passwort vergessen?</a>
+
+    <p class="divider"><span>ODER</span></p>
+
+    <button
+      type="button"
+      appButton
+      variant="subtle"
+      class="google"
+      data-testid="google-login"
+      (click)="notImplemented()"
+    >
+      <img src="/brand/google.png" alt="" width="24" height="24" />
+      Anmelden mit Google
+    </button>
+
+    @if (formError()) {
+      <p class="form-error" role="alert">{{ formError() }}</p>
+    }
+
+    <div class="actions">
+      <button appButton type="submit" data-testid="login" [disabled]="form.invalid || busy()">
+        Anmelden
+      </button>
+      <button
+        appButton
+        type="button"
+        variant="secondary"
+        data-testid="guest-login"
+        [disabled]="busy()"
+        (click)="asGuest()"
+      >
+        Gäste-Login
+      </button>
+    </div>
+  </form>
+</app-auth-layout>

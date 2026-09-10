@@ -4,7 +4,8 @@
 !.env.example
 
 # Internal working docs (local only)
-docs/superpowers/
+docs/
+scratch/
 PROJECT.md
 PORTFOLIO_BRIEF.md
 

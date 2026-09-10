@@ -1,6 +1,6 @@
 import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'subtle';
 
 /**
  * Styles a native <button>: `<button appButton variant="secondary">`.
@@ -18,6 +18,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
     '[class.primary]': 'variant() === "primary"',
     '[class.secondary]': 'variant() === "secondary"',
     '[class.ghost]': 'variant() === "ghost"',
+    '[class.subtle]': 'variant() === "subtle"',
     '[class.full-width]': 'fullWidth()',
   },
   template: '<ng-content />',
@@ -55,6 +56,15 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
       background: var(--color-surface-alt);
       color: var(--color-primary-hover);
     }
+
+    /* The lavender pill behind "Anmelden mit Google". */
+    :host(.subtle) {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-weight: var(--weight-regular);
+    }
+
+    :host(.subtle:hover:not(:disabled)) { background: var(--color-surface-alt); }
 
     :host(.ghost) {
       background: transparent;

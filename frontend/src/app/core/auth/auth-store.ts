@@ -12,6 +12,11 @@ export interface SignupPayload {
   consent: boolean;
 }
 
+export interface ProfilePatch {
+  full_name?: string;
+  default_avatar?: string;
+}
+
 interface UserEnvelope {
   user: User;
 }
@@ -39,6 +44,22 @@ export class AuthStore {
 
   loginWithGoogle(idToken: string): Observable<User> {
     return this.enveloped('/api/auth/google/', { id_token: idToken });
+  }
+
+  /** PATCH /api/auth/me/ returns the user object directly, not an envelope. */
+  updateProfile(patch: ProfilePatch): Observable<User> {
+    return this.http
+      .patch<User>('/api/auth/me/', patch)
+      .pipe(tap((user) => this.currentUser.set(user)));
+  }
+
+  uploadAvatar(file: File): Observable<User> {
+    const body = new FormData();
+    body.append('avatar', file);
+    // No Content-Type header: the browser must set the multipart boundary itself.
+    return this.http
+      .patch<User>('/api/auth/me/', body)
+      .pipe(tap((user) => this.currentUser.set(user)));
   }
 
   logout(): Observable<void> {

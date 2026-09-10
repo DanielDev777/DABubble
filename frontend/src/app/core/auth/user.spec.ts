@@ -25,7 +25,7 @@ describe('avatarSrc', () => {
   });
 
   it('maps a default avatar slug to a local asset', () => {
-    expect(avatarSrc(makeUser({ default_avatar: 'bald-beard' }))).toBe('/avatars/bald-beard.svg');
+    expect(avatarSrc(makeUser({ default_avatar: 'bald-beard' }))).toBe('/avatars/bald-beard.png');
   });
 
   it('falls back when nothing is set', () => {

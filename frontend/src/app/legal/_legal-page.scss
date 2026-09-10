@@ -1,0 +1,47 @@
+// Shared by Impressum and Datenschutz: prose inside the wide AuthLayout card.
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+
+  h1 {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.back {
+  display: inline-flex;
+  padding: var(--space-2);
+  border-radius: 50%;
+
+  &:hover {
+    background: var(--color-surface-alt);
+  }
+}
+
+.prose {
+  margin-top: var(--space-6);
+  max-width: 65ch;
+
+  h2 {
+    font-size: var(--text-lg);
+    margin: var(--space-6) 0 var(--space-3);
+  }
+
+  p,
+  ul {
+    margin: 0 0 var(--space-4);
+  }
+
+  ul {
+    padding-left: var(--space-5);
+  }
+}
+
+.todo {
+  border-left: 4px solid var(--color-bubble-orange);
+  background: var(--color-surface-alt);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-sm);
+}

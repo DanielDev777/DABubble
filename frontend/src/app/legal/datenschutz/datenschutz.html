@@ -1,0 +1,46 @@
+<app-auth-layout [wide]="true">
+  <header class="card-header">
+    <a class="back" routerLink="/login" aria-label="Zurück zur Anmeldung">
+      <img src="/icons/arrow-back.svg" alt="" width="24" height="24" />
+    </a>
+    <h1>Datenschutzerklärung</h1>
+  </header>
+
+  <div class="prose">
+    <p class="todo" data-testid="datenschutz-todo">
+      <strong>TODO — noch auszufüllen.</strong>
+      Die Datenschutzerklärung muss beschreiben, welche Daten diese App
+      tatsächlich verarbeitet und auf welcher Rechtsgrundlage. Die Gliederung
+      unten listet auf, was DABubble speichert; die Texte fehlen bewusst.
+    </p>
+
+    <h2>Verantwortliche Stelle</h2>
+    <p>
+      <!-- TODO: dieselben Angaben wie im Impressum -->
+    </p>
+
+    <h2>Welche Daten wir verarbeiten</h2>
+    <ul>
+      <li>Kontodaten: Vor- und Nachname, E-Mail-Adresse, Passwort-Hash</li>
+      <li>Profilbild: entweder ein hochgeladenes Bild oder einer der sechs Standard-Avatare</li>
+      <li>Nachrichten in Channels, Threads und Direktnachrichten</li>
+      <li>Anmeldung: JWT-Cookies (httpOnly) sowie ein CSRF-Cookie</li>
+      <li>Online-Status, solange die App geöffnet ist</li>
+    </ul>
+
+    <h2>Rechtsgrundlage</h2>
+    <p>
+      <!-- TODO: Art. 6 DSGVO — welche Grundlage für welche Verarbeitung -->
+    </p>
+
+    <h2>Speicherdauer und Löschung</h2>
+    <p>
+      <!-- TODO: wie lange Daten gespeichert werden und wie ein Konto gelöscht wird -->
+    </p>
+
+    <h2>Ihre Rechte</h2>
+    <p>
+      <!-- TODO: Auskunft, Berichtigung, Löschung, Widerspruch, Beschwerderecht -->
+    </p>
+  </div>
+</app-auth-layout>

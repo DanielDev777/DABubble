@@ -1,0 +1,23 @@
+<div class="page">
+  <header>
+    <img class="logo" src="/brand/logo.png" alt="DABubble" />
+
+    @if (showSignupLink()) {
+      <div class="signup-cta">
+        <span>Neu bei DABubble?</span>
+        <a routerLink="/signup">Konto erstellen</a>
+      </div>
+    }
+  </header>
+
+  <main>
+    <section class="card" [class.wide]="wide()">
+      <ng-content />
+    </section>
+  </main>
+
+  <footer>
+    <a routerLink="/impressum">Impressum</a>
+    <a routerLink="/datenschutz">Datenschutz</a>
+  </footer>
+</div>
